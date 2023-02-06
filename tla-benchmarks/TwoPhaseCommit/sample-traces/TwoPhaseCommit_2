@@ -1,0 +1,7 @@
+[{"senderId":0,"receiverId":1,"message":"RMPrepare"},{"senderId":0,"receiverId":2,"message":"RMPrepare"},{"senderId":0,"receiverId":3,"message":"RMPrepare"}]
+
+[{"senderId":1,"receiverId":0,"message":"TMRcvPrepared"},{"senderId":2,"receiverId":0,"message":"TMRcvPrepared"},{"senderId":3,"receiverId":0,"message":"TMRcvPrepared"}]
+
+[{"senderId":0,"receiverId":1,"message":"TMCommit"},{"senderId":0,"receiverId":2,"message":"TMCommit"},{"senderId":0,"receiverId":3,"message":"TMCommit"}]
+
+[{"senderId":0,"receiverId":1,"message":"RMRcvCommitMsg"},{"senderId":0,"receiverId":2,"message":"RMRcvCommitMsg"},{"senderId":0,"receiverId":3,"message":"RMRcvCommitMsg"}] 

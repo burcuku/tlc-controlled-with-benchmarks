@@ -1,16 +1,16 @@
----- MODULE TPC ----
+---- MODULE TPC_N10 ----
 EXTENDS TwoPhaseCommit, TLC
 
 \* CONSTANT definitions @modelParameterConstants:0RM
-const_167723695328810000 == 
+const_167757697465838000 == 
 {1, 2, 3}
 ----
 
 \* CONSTANT definitions @modelParameterConstants:1N
-const_167723695328811000 == 
-2
+const_167757697465839000 == 
+10
 ----
 
 =============================================================================
 \* Modification History
-\* Created Fri Feb 24 12:09:13 CET 2023 by burcuozkan
+\* Created Tue Feb 28 10:36:14 CET 2023 by burcuozkan

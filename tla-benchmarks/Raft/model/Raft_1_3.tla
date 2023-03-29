@@ -18,7 +18,7 @@ const_1679050414916100000 ==
 
 \* CONSTANT definitions @modelParameterConstants:3Nil
 const_1679050414916101000 == 
-"nil"
+0
 ----
 
 \* CONSTANT definitions @modelParameterConstants:4RequestVoteResponse

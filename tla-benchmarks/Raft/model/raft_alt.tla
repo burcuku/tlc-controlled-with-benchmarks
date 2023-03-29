@@ -85,13 +85,15 @@ LastTerm(xlog) == IF Len(xlog) = 0 THEN 0 ELSE xlog[Len(xlog)].term
 
 LogIndices == 0..MaxLogIndex
 
-Terms == 0..LargestTerm
+Terms == 1..LargestTerm
+
+NilTerm == 0
 
 AllValues == Value \cup {Nil}
 
 NilEntry == [term |-> 0, value |-> Nil]
 
-ValidEntries == [term: Terms, value: AllValues]
+ValidEntries == [term: Terms \cup {NilTerm}, value: AllValues]
 
 AllEntries == ValidEntries \cup {NilEntry}
 
@@ -241,6 +243,12 @@ HandleRequestVoteResponse(i, j, term, grant, value) ==
                 /\ UNCHANGED <<votesGranted>>
         /\ UNCHANGED <<serverVars, votedFor, leaderVars, logVars>>
 
+\* Constraints on inputs for an append entries request
+ValidAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entry, cIndex) ==
+    /\ i /= j
+    /\ pLogTerm < term
+    /\ pLogTerm < entry.term
+
 \* Server i receives an AppendEntries request from server j with
 \* m.mterm <= currentTerm[i]. This just handles m.entries of length 0 or 1, but
 \* implementations could safely accept more by treating them the same as
@@ -326,7 +334,7 @@ Next == \/ \E i \in Server : Restart(i)
         \/ \E i \in Server : AdvanceCommitIndex(i)
         \/ \E i,j \in Server, term,lTerm \in Terms, lIndex \in LogIndices : HandleRequestVoteRequest(i,j,lTerm,lIndex,term)
         \/ \E i,j \in Server, term \in Terms, grant \in BOOLEAN, value \in AllValues : HandleRequestVoteResponse(i, j, term, grant, value)
-        \/ \E i,j \in Server, term,pLogTerm \in Terms, pLogIndex, cIndex \in LogIndices, entry \in AllEntries : HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entry, cIndex)
+        \/ \E i,j \in Server, term,pLogTerm \in Terms, pLogIndex, cIndex \in LogIndices, entry \in AllEntries : ValidAppendEntriesRequest(i,j,pLogIndex, pLogTerm, term, entry, cIndex) /\ HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entry, cIndex)
         \/ \E i,j \in Server, term \in Terms, success \in BOOLEAN, mIndex \in LogIndices: HandleAppendEntriesResponse(i, j, term, success, mIndex)
 
 ===================================================================================

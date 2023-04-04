@@ -1,64 +1,46 @@
----- MODULE MC ----
-EXTENDS raft, TLC
+---- MODULE RAFT_3_3 ----
+EXTENDS raft_alt, TLC
 
-\* CONSTANT definitions @modelParameterConstants:0AppendEntriesResponse
-const_167905646125114000 == 
-"aer_message"
+\* CONSTANT definitions @modelParameterConstants:0Follower
+const_168061104927626000 == 
+"follower"
 ----
 
-\* CONSTANT definitions @modelParameterConstants:1Follower
-const_167905646125115000 == 
-"state_follower"
+\* CONSTANT definitions @modelParameterConstants:1Leader
+const_168061104927727000 == 
+"leader"
 ----
 
-\* CONSTANT definitions @modelParameterConstants:2Leader
-const_167905646125116000 == 
-"state_leader"
+\* CONSTANT definitions @modelParameterConstants:2LargestTerm
+const_168061104927728000 == 
+10
 ----
 
 \* CONSTANT definitions @modelParameterConstants:3Nil
-const_167905646125117000 == 
-"nil"
+const_168061104927729000 == 
+0
 ----
 
-\* CONSTANT definitions @modelParameterConstants:4RequestVoteResponse
-const_167905646125118000 == 
-"rvr_message"
+\* CONSTANT definitions @modelParameterConstants:4MaxLogIndex
+const_168061104927730000 == 
+6
 ----
 
 \* CONSTANT definitions @modelParameterConstants:5Candidate
-const_167905646125119000 == 
-"state_candidate"
+const_168061104927731000 == 
+"candidate"
 ----
 
-\* CONSTANT definitions @modelParameterConstants:6RequestVoteRequest
-const_167905646125120000 == 
-"rvre_message"
-----
-
-\* CONSTANT definitions @modelParameterConstants:7AppendEntriesRequest
-const_167905646125121000 == 
-"aere_message"
-----
-
-\* CONSTANT definitions @modelParameterConstants:8Value
-const_167905646125122000 == 
+\* CONSTANT definitions @modelParameterConstants:6Value
+const_168061104927732000 == 
 {1,2,3}
 ----
 
-\* CONSTANT definitions @modelParameterConstants:9Server
-const_167905646125123000 == 
+\* CONSTANT definitions @modelParameterConstants:7Server
+const_168061104927733000 == 
 {1,2,3}
 ----
 
-\* INIT definition @modelBehaviorNoSpec:0
-init_167905646125124000 ==
-FALSE/\elections = 0
-----
-\* NEXT definition @modelBehaviorNoSpec:0
-next_167905646125125000 ==
-FALSE/\elections' = elections
-----
 =============================================================================
 \* Modification History
-\* Created Fri Mar 17 13:34:21 CET 2023 by srinidhin
+\* Created Tue Apr 04 14:24:09 CEST 2023 by srinidhin

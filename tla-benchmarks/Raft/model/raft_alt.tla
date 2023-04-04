@@ -228,7 +228,7 @@ HandleRequestVoteRequest(i,j,lTerm,lIndex,term) ==
 
 \* Server i receives a RequestVote response from server j with
 \* m.mterm = currentTerm[i].
-HandleRequestVoteResponse(i, j, term, grant, value) ==
+HandleRequestVoteResponse(i, j, term, grant) ==
     /\ term > currentTerm[i] => UpdateTerm(i, j, term)
     /\ term < currentTerm[i] => UNCHANGED <<serverVars, candidateVars, leaderVars, logVars>>
     /\  \* This tallies votes even when the current state is not Candidate, but
@@ -244,68 +244,100 @@ HandleRequestVoteResponse(i, j, term, grant, value) ==
         /\ UNCHANGED <<serverVars, votedFor, leaderVars, logVars>>
 
 \* Constraints on inputs for an append entries request
-ValidAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entry, cIndex) ==
+ValidAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, cIndex) ==
     /\ i /= j
     /\ pLogTerm < term
-    /\ pLogTerm < entry.term
+    /\  \/ entryTerm = 0
+        \/  /\ entryTerm /= 0 
+            /\ pLogTerm < entryTerm
+
 
 \* Server i receives an AppendEntries request from server j with
-\* m.mterm <= currentTerm[i]. This just handles m.entries of length 0 or 1, but
-\* implementations could safely accept more by treating them the same as
-\* multiple independent requests of 1 entry.
-HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entry, cIndex) ==
+\* m.mterm <= currentTerm[i]. This handler is invoked when there 
+\* are no entries associated with the request
+HandleNilAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, cIndex) == 
+    /\ ValidAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, 0, cIndex)
     /\ term > currentTerm[i] => UpdateTerm(i, j, term)
     /\  (LET logOk == \/ pLogIndex = 0
                      \/ /\ pLogIndex > 0
                         /\ pLogIndex <= Len(log[i])
                         /\ pLogTerm = log[i][pLogIndex].term
-             entries == 
-                 IF entry.term = 0 /\ entry.value = Nil
-                 THEN << >>
-                 ELSE << entry >>
-        IN /\ term <= currentTerm[i]
-        /\  \/ /\ \* reject request
-                    \/ term < currentTerm[i]
-                    \/ /\ term = currentTerm[i]
+        IN  /\ term <= currentTerm[i]
+            /\  \/ /\ \* reject request
+                    \/  term < currentTerm[i]
+                    \/  /\ term = currentTerm[i]
+                        /\ state[i] = Follower
+                        /\ \lnot logOk
+                        /\ UNCHANGED <<serverVars, logVars>>
+                \/ \* return to follower state
+                    /\ term = currentTerm[i]
+                    /\ state[i] = Candidate
+                    /\ state' = [state EXCEPT ![i] = Follower]
+                    /\ UNCHANGED <<currentTerm, votedFor, logVars>>
+                \/ \* accept request
+                    /\ term = currentTerm[i]
                     /\ state[i] = Follower
-                    /\ \lnot logOk
-                /\ UNCHANGED <<serverVars, logVars>>
-            \/ \* return to follower state
-                /\ term = currentTerm[i]
-                /\ state[i] = Candidate
-                /\ state' = [state EXCEPT ![i] = Follower]
-                /\ UNCHANGED <<currentTerm, votedFor, logVars>>
-            \/ \* accept request
-                /\ term = currentTerm[i]
-                /\ state[i] = Follower
-                /\ logOk
-                /\ LET index == pLogIndex + 1
-                    IN \/ \* already done with request
-                        /\ \/ entries = << >>
-                            \/ /\ entries /= << >>
+                    /\ logOk
+                    /\  LET index == pLogIndex + 1
+                        IN  \* already done with request or
+                            \* no conflict: nothing to append since
+                            \* cannot have conflict because empty request
+                            /\ commitIndex' = [commitIndex EXCEPT ![i] =
+                                                    cIndex]
+                            /\ UNCHANGED <<serverVars, log>>
+            /\ UNCHANGED <<candidateVars, leaderVars>>)
+
+\* Server i receives an AppendEntries request from server j with
+\* m.mterm <= currentTerm[i]. This just handles m.entries of length 1, but
+\* implementations could safely accept more by treating them the same as
+\* multiple independent requests of 1 entry.
+HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, entryValue, cIndex) ==
+    /\ ValidAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, cIndex)
+    /\ term > currentTerm[i] => UpdateTerm(i, j, term)
+    /\  (LET logOk == \/ pLogIndex = 0
+                     \/ /\ pLogIndex > 0
+                        /\ pLogIndex <= Len(log[i])
+                        /\ pLogTerm = log[i][pLogIndex].term
+             entries == << [term |-> entryTerm, value |-> entryValue] >>
+        IN  /\ term <= currentTerm[i]
+            /\  \/  /\ \* reject request
+                        \/  term < currentTerm[i]
+                        \/  /\ term = currentTerm[i]
+                            /\ state[i] = Follower
+                            /\ \lnot logOk
+                    /\ UNCHANGED <<serverVars, logVars>>
+                \/ \* return to follower state
+                    /\ term = currentTerm[i]
+                    /\ state[i] = Candidate
+                    /\ state' = [state EXCEPT ![i] = Follower]
+                    /\ UNCHANGED <<currentTerm, votedFor, logVars>>
+                \/ \* accept request
+                    /\ term = currentTerm[i]
+                    /\ state[i] = Follower
+                    /\ logOk
+                    /\ LET index == pLogIndex + 1
+                        IN  \/ \* already done with request
                                 /\ Len(log[i]) >= index
                                 /\ log[i][index].term = entries[1].term
-                            \* This could make our commitIndex decrease (for
-                            \* example if we process an old, duplicated request),
-                            \* but that doesn't really affect anything.
-                        /\ commitIndex' = [commitIndex EXCEPT ![i] =
-                                                cIndex]
-                        /\ UNCHANGED <<serverVars, log>>
-                    \/ \* conflict: remove 1 entry
-                        /\ entries /= << >>
-                        /\ Len(log[i]) >= index
-                        /\ log[i][index].term /= entries[1].term
-                        /\ LET new == [index2 \in 1..(Len(log[i]) - 1) |->
-                                            log[i][index2]]
-                            IN log' = [log EXCEPT ![i] = new]
-                        /\ UNCHANGED <<serverVars, commitIndex>>
-                    \/ \* no conflict: append entry
-                        /\ entries /= << >>
-                        /\ Len(log[i]) = pLogIndex
-                        /\ log' = [log EXCEPT ![i] =
-                                        Append(log[i], entries[1])]
-                        /\ UNCHANGED <<serverVars, commitIndex>>
-        /\ UNCHANGED <<candidateVars, leaderVars>>)
+                                    \* This could make our commitIndex decrease (for
+                                    \* example if we process an old, duplicated request),
+                                    \* but that doesn't really affect anything.
+                                /\ commitIndex' = [commitIndex EXCEPT ![i] =
+                                                        cIndex]
+                                /\ UNCHANGED <<serverVars, log>>
+                            \/ \* conflict: remove 1 entry
+                                /\ Len(log[i]) >= index
+                                /\ log[i][index].term /= entries[1].term
+                                /\ LET new == [index2 \in 1..(Len(log[i]) - 1) |->
+                                                    log[i][index2]]
+                                    IN log' = [log EXCEPT ![i] = new]
+                                /\ UNCHANGED <<serverVars, commitIndex>>
+                            \/ \* no conflict: append entry
+                                /\ Len(log[i]) = pLogIndex
+                                /\ log' = [log EXCEPT ![i] =
+                                                Append(log[i], entries[1])]
+                                /\ UNCHANGED <<serverVars, commitIndex>>
+            /\ UNCHANGED <<candidateVars, leaderVars>>)
 
 \* Server i receives an AppendEntries response from server j with
 \* m.mterm = currentTerm[i].
@@ -333,8 +365,9 @@ Next == \/ \E i \in Server : Restart(i)
         \/ \E i \in Server, v \in Value : ClientRequest(i, v)
         \/ \E i \in Server : AdvanceCommitIndex(i)
         \/ \E i,j \in Server, term,lTerm \in Terms, lIndex \in LogIndices : HandleRequestVoteRequest(i,j,lTerm,lIndex,term)
-        \/ \E i,j \in Server, term \in Terms, grant \in BOOLEAN, value \in AllValues : HandleRequestVoteResponse(i, j, term, grant, value)
-        \/ \E i,j \in Server, term,pLogTerm \in Terms, pLogIndex, cIndex \in LogIndices, entry \in AllEntries : ValidAppendEntriesRequest(i,j,pLogIndex, pLogTerm, term, entry, cIndex) /\ HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entry, cIndex)
+        \/ \E i,j \in Server, term \in Terms, grant \in BOOLEAN: HandleRequestVoteResponse(i, j, term, grant)
+        \/ \E i,j \in Server, term,pLogTerm \in Terms, pLogIndex, cIndex \in LogIndices : HandleNilAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, cIndex)
+        \/ \E i,j \in Server, term,pLogTerm,entryTerm \in Terms, pLogIndex, cIndex \in LogIndices, entryValue \in AllValues : HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, entryValue, cIndex)
         \/ \E i,j \in Server, term \in Terms, success \in BOOLEAN, mIndex \in LogIndices: HandleAppendEntriesResponse(i, j, term, success, mIndex)
 
 ===================================================================================

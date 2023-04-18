@@ -144,9 +144,9 @@ Timeout(i) == /\ state[i] \in {Follower, Candidate}
               /\ currentTerm' = [currentTerm EXCEPT ![i] = currentTerm[i] + 1]
               \* Most implementations would probably just set the local vote
               \* atomically, but messaging localhost for it is weaker.
-              /\ votedFor' = [votedFor EXCEPT ![i] = Nil]
-              /\ votesResponded' = [votesResponded EXCEPT ![i] = {}]
-              /\ votesGranted'   = [votesGranted EXCEPT ![i] = {}]
+              /\ votedFor' = [votedFor EXCEPT ![i] = i]
+              /\ votesResponded' = [votesResponded EXCEPT ![i] = {i}]
+              /\ votesGranted'   = [votesGranted EXCEPT ![i] = {i}]
               /\ UNCHANGED <<leaderVars, logVars>>
 
 \* Candidate i transitions to leader.

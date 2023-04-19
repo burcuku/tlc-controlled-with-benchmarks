@@ -198,13 +198,11 @@ AdvanceCommitIndex(i) ==
 \* Message handler helpers
 
 \* Any RPC with a newer term causes the recipient to advance its term first.
-UpdateTerm(i, j, term) ==
+UpdateTerm(i, term) ==
     /\ term > currentTerm[i]
     /\ currentTerm'    = [currentTerm EXCEPT ![i] = term]
     /\ state'          = [state       EXCEPT ![i] = Follower]
     /\ votedFor'       = [votedFor    EXCEPT ![i] = Nil]
-       \* messages is unchanged so m can be processed further.
-    /\ UNCHANGED <<candidateVars, leaderVars, logVars>>
 
 ----
 
@@ -214,34 +212,41 @@ UpdateTerm(i, j, term) ==
 \* Server i receives a RequestVote request from server j with
 \* m.mterm <= currentTerm[i].
 HandleRequestVoteRequest(i,j,lTerm,lIndex,term) == 
-    /\ term > currentTerm[i] => UpdateTerm(i, j, term)
-    /\ (LET logOk == \/ lTerm > LastTerm(log[i])
+    LET cTerm == (IF term > currentTerm[i] THEN term ELSE currentTerm[i])
+        cState == (IF term > currentTerm[i] THEN Follower ELSE state[i])
+        vFor == (IF term > currentTerm[i] THEN  Nil ELSE votedFor[i])
+        logOk ==    \/ lTerm > LastTerm(log[i])
                     \/ /\ lTerm = LastTerm(log[i])
                         /\ lIndex >= Len(log[i])
-            grant == /\ term = currentTerm[i]
+        grant ==    /\ term = cTerm
                     /\ logOk
-                    /\ votedFor[i] \in {Nil, j}
-        IN  /\ term <= currentTerm[i]
-            /\  \/ (grant  /\ votedFor' = [votedFor EXCEPT ![i] = j])
-                \/ (~grant /\ UNCHANGED votedFor)
-            /\ UNCHANGED <<state, currentTerm, candidateVars, leaderVars, logVars>>)
+                    /\ vFor \in {Nil, j}
+    IN  /\ term <= currentTerm[i]
+        /\  \/ (grant  /\ votedFor' = [votedFor EXCEPT ![i] = j])
+            \/ (~grant /\ votedFor' = [votedFor EXCEPT ![i] = vFor])
+        /\ state' = [state EXCEPT ![i] = cState]
+        /\ currentTerm' = [currentTerm EXCEPT  ![i] = cTerm]
+        /\ UNCHANGED <<candidateVars, leaderVars, logVars>>
 
 \* Server i receives a RequestVote response from server j with
 \* m.mterm = currentTerm[i].
 HandleRequestVoteResponse(i, j, term, grant) ==
-    /\ term > currentTerm[i] => UpdateTerm(i, j, term)
-    /\ term < currentTerm[i] => UNCHANGED <<serverVars, candidateVars, leaderVars, logVars>>
-    /\  \* This tallies votes even when the current state is not Candidate, but
-        \* they won't be looked at, so it doesn't matter.
-        /\ term = currentTerm[i]
-        /\ votesResponded' = [votesResponded EXCEPT ![i] =
-                                votesResponded[i] \cup {j}]
-        /\  \/  /\ grant
-                /\ votesGranted' = [votesGranted EXCEPT ![i] =
-                                    votesGranted[i] \cup {j}]
-            \/  /\ ~grant
-                /\ UNCHANGED <<votesGranted>>
-        /\ UNCHANGED <<serverVars, votedFor, leaderVars, logVars>>
+    LET cTerm == (IF term > currentTerm[i] THEN term ELSE currentTerm[i])
+        cState == (IF term > currentTerm[i] THEN Follower ELSE state[i])
+        vFor == (IF term > currentTerm[i] THEN  Nil ELSE votedFor[i])
+    IN  /\ term < cTerm => UNCHANGED <<serverVars, candidateVars, leaderVars, logVars>>
+        /\  \* This tallies votes even when the current state is not Candidate, but
+            \* they won't be looked at, so it doesn't matter.
+            /\ term = cTerm
+            /\ votesResponded' = [votesResponded EXCEPT ![i] =
+                                    votesResponded[i] \cup {j}]
+            /\  \/  /\ grant
+                    /\ votesGranted' = [votesGranted EXCEPT ![i] =
+                                        votesGranted[i] \cup {j}]
+                \/  /\ ~grant
+                    /\ UNCHANGED <<votesGranted>>
+            /\ UNCHANGED <<leaderVars, logVars>>
+        /\  IF term > currentTerm[i] THEN UpdateTerm(i, term) ELSE UNCHANGED serverVars
 
 \* Constraints on inputs for an append entries request
 ValidAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, cIndex) ==
@@ -257,26 +262,30 @@ ValidAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, cIndex) ==
 \* are no entries associated with the request
 HandleNilAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, cIndex) == 
     /\ ValidAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, 0, cIndex)
-    /\ term > currentTerm[i] => UpdateTerm(i, j, term)
-    /\  (LET logOk == \/ pLogIndex = 0
+    /\  (LET cTerm == (IF term > currentTerm[i] THEN term ELSE currentTerm[i])
+            cState == (IF term > currentTerm[i] THEN Follower ELSE state[i])
+            vFor == (IF term > currentTerm[i] THEN  Nil ELSE votedFor[i])
+            logOk == \/ pLogIndex = 0
                      \/ /\ pLogIndex > 0
                         /\ pLogIndex <= Len(log[i])
                         /\ pLogTerm = log[i][pLogIndex].term
-        IN  /\ term <= currentTerm[i]
-            /\  \/ /\ \* reject request
-                    \/  term < currentTerm[i]
-                    \/  /\ term = currentTerm[i]
-                        /\ state[i] = Follower
-                        /\ \lnot logOk
-                        /\ UNCHANGED <<serverVars, logVars>>
+        IN  /\ term <= cTerm
+            /\  \/  /\ \* reject request
+                        \/  term < cTerm
+                        \/  /\ term = cTerm
+                            /\ cState = Follower
+                            /\ \lnot logOk
+                    /\ IF term > currentTerm[i] THEN UpdateTerm(i, term) ELSE UNCHANGED serverVars
+                    /\ UNCHANGED logVars
                 \/ \* return to follower state
-                    /\ term = currentTerm[i]
-                    /\ state[i] = Candidate
+                    /\ term = cTerm
+                    /\ cState = Candidate
                     /\ state' = [state EXCEPT ![i] = Follower]
-                    /\ UNCHANGED <<currentTerm, votedFor, logVars>>
+                    /\ IF term > currentTerm[i] THEN (currentTerm' = [currentTerm EXCEPT  ![i] = cTerm] /\ votedFor' = [votedFor EXCEPT ![i] = vFor]) ELSE UNCHANGED <<currentTerm, votedFor>>
+                    /\ UNCHANGED logVars
                 \/ \* accept request
-                    /\ term = currentTerm[i]
-                    /\ state[i] = Follower
+                    /\ term = cTerm
+                    /\ cState = Follower
                     /\ logOk
                     /\  LET index == pLogIndex + 1
                         IN  \* already done with request or
@@ -284,7 +293,8 @@ HandleNilAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, cIndex) ==
                             \* cannot have conflict because empty request
                             /\ commitIndex' = [commitIndex EXCEPT ![i] =
                                                     cIndex]
-                            /\ UNCHANGED <<serverVars, log>>
+                            /\ IF term > currentTerm[i] THEN UpdateTerm(i, term) ELSE UNCHANGED serverVars
+                            /\ UNCHANGED log
             /\ UNCHANGED <<candidateVars, leaderVars>>)
 
 \* Server i receives an AppendEntries request from server j with
@@ -293,27 +303,31 @@ HandleNilAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, cIndex) ==
 \* multiple independent requests of 1 entry.
 HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, entryValue, cIndex) ==
     /\ ValidAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, cIndex)
-    /\ term > currentTerm[i] => UpdateTerm(i, j, term)
-    /\  (LET logOk == \/ pLogIndex = 0
+    /\  LET cTerm == (IF term > currentTerm[i] THEN term ELSE currentTerm[i])
+            cState == (IF term > currentTerm[i] THEN Follower ELSE state[i])
+            vFor == (IF term > currentTerm[i] THEN  Nil ELSE votedFor[i])
+            logOk == \/ pLogIndex = 0
                      \/ /\ pLogIndex > 0
                         /\ pLogIndex <= Len(log[i])
                         /\ pLogTerm = log[i][pLogIndex].term
              entries == << [term |-> entryTerm, value |-> entryValue] >>
-        IN  /\ term <= currentTerm[i]
+        IN  /\ term <= cTerm
             /\  \/  /\ \* reject request
-                        \/  term < currentTerm[i]
-                        \/  /\ term = currentTerm[i]
-                            /\ state[i] = Follower
+                        \/  term < cTerm
+                        \/  /\ term = cTerm
+                            /\ cState = Follower
                             /\ \lnot logOk
-                    /\ UNCHANGED <<serverVars, logVars>>
+                    /\ IF term > currentTerm[i] THEN UpdateTerm(i, term) ELSE UNCHANGED serverVars
+                    /\ UNCHANGED logVars
                 \/ \* return to follower state
-                    /\ term = currentTerm[i]
-                    /\ state[i] = Candidate
+                    /\ term = cTerm
+                    /\ cState = Candidate
                     /\ state' = [state EXCEPT ![i] = Follower]
-                    /\ UNCHANGED <<currentTerm, votedFor, logVars>>
+                    /\ IF term > currentTerm[i] THEN (currentTerm' = [currentTerm EXCEPT  ![i] = cTerm] /\ votedFor' = [votedFor EXCEPT ![i] = vFor]) ELSE UNCHANGED <<currentTerm, votedFor>>
+                    /\ UNCHANGED logVars
                 \/ \* accept request
-                    /\ term = currentTerm[i]
-                    /\ state[i] = Follower
+                    /\ term = cTerm
+                    /\ cState = Follower
                     /\ logOk
                     /\ LET index == pLogIndex + 1
                         IN  \/ \* already done with request
@@ -324,35 +338,41 @@ HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, entryValu
                                     \* but that doesn't really affect anything.
                                 /\ commitIndex' = [commitIndex EXCEPT ![i] =
                                                         cIndex]
-                                /\ UNCHANGED <<serverVars, log>>
+                                /\ IF term > currentTerm[i] THEN UpdateTerm(i, term) ELSE UNCHANGED serverVars
+                                /\ UNCHANGED log
                             \/ \* conflict: remove 1 entry
                                 /\ Len(log[i]) >= index
                                 /\ log[i][index].term /= entries[1].term
                                 /\ LET new == [index2 \in 1..(Len(log[i]) - 1) |->
                                                     log[i][index2]]
                                     IN log' = [log EXCEPT ![i] = new]
-                                /\ UNCHANGED <<serverVars, commitIndex>>
+                                /\ IF term > currentTerm[i] THEN UpdateTerm(i, term) ELSE UNCHANGED serverVars
+                                /\ UNCHANGED commitIndex
                             \/ \* no conflict: append entry
                                 /\ Len(log[i]) = pLogIndex
                                 /\ log' = [log EXCEPT ![i] =
                                                 Append(log[i], entries[1])]
-                                /\ UNCHANGED <<serverVars, commitIndex>>
+                                /\ IF term > currentTerm[i] THEN UpdateTerm(i, term) ELSE UNCHANGED serverVars
+                                /\ UNCHANGED commitIndex
             /\ UNCHANGED <<candidateVars, leaderVars>>)
 
 \* Server i receives an AppendEntries response from server j with
 \* m.mterm = currentTerm[i].
 HandleAppendEntriesResponse(i, j, term, success, mIndex) ==
-    /\ term > currentTerm[i] => UpdateTerm(i, j, term)
-    /\ term < currentTerm[i] => UNCHANGED <<serverVars, candidateVars, leaderVars, logVars>>
-    /\  /\ term = currentTerm[i]
-        /\  \/  /\ success \* successful
-                /\ nextIndex'  = [nextIndex  EXCEPT ![i][j] = mIndex + 1]
-                /\ matchIndex' = [matchIndex EXCEPT ![i][j] = mIndex]
-            \/  /\ \lnot success \* not successful
-                /\ nextIndex' = [nextIndex EXCEPT ![i][j] =
-                                    Max({nextIndex[i][j] - 1, 1})]
-                /\ UNCHANGED <<matchIndex>>
-        /\ UNCHANGED <<serverVars, candidateVars, logVars>>
+    LET cTerm == (IF term > currentTerm[i] THEN term ELSE currentTerm[i])
+        cState == (IF term > currentTerm[i] THEN Follower ELSE state[i])
+        vFor == (IF term > currentTerm[i] THEN  Nil ELSE votedFor[i])
+    IN  /\  term < cTerm => UNCHANGED <<candidateVars, leaderVars, logVars>>
+        /\  /\ term = cTerm
+            /\  \/  /\ success \* successful
+                    /\ nextIndex'  = [nextIndex  EXCEPT ![i][j] = mIndex + 1]
+                    /\ matchIndex' = [matchIndex EXCEPT ![i][j] = mIndex]
+                \/  /\ \lnot success \* not successful
+                    /\ nextIndex' = [nextIndex EXCEPT ![i][j] =
+                                        Max({nextIndex[i][j] - 1, 1})]
+                    /\ UNCHANGED <<matchIndex>>
+            /\ UNCHANGED <<candidateVars, logVars>>
+        /\  IF term > currentTerm[i] THEN UpdateTerm(i, term) ELSE UNCHANGED serverVars
 
 \* End of message handlers.
 

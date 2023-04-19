@@ -12,7 +12,7 @@ EXTENDS Naturals, FiniteSets, Sequences, TLC
 CONSTANTS Server
 
 \* The set of requests that can go into the log
-CONSTANTS Value
+CONSTANTS MaxValue
 
 \* Server states.
 CONSTANTS Follower, Candidate, Leader
@@ -89,7 +89,7 @@ Terms == 1..LargestTerm
 
 NilTerm == 0
 
-AllValues == Value \cup {Nil}
+AllValues == 1..MaxValue \cup {Nil}
 
 NilEntry == [term |-> 0, value |-> Nil]
 
@@ -382,7 +382,7 @@ HandleAppendEntriesResponse(i, j, term, success, mIndex) ==
 Next == \/ \E i \in Server : Restart(i)
         \/ \E i \in Server : Timeout(i)
         \/ \E i \in Server : BecomeLeader(i)
-        \/ \E i \in Server, v \in Value : ClientRequest(i, v)
+        \/ \E i \in Server, v \in 1..MaxValue : ClientRequest(i, v)
         \/ \E i \in Server : AdvanceCommitIndex(i)
         \/ \E i,j \in Server, term,lTerm \in Terms, lIndex \in LogIndices : HandleRequestVoteRequest(i,j,lTerm,lIndex,term)
         \/ \E i,j \in Server, term \in Terms, grant \in BOOLEAN: HandleRequestVoteResponse(i, j, term, grant)

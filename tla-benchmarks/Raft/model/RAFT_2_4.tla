@@ -31,9 +31,9 @@ const_168061101273123000 ==
 "candidate"
 ----
 
-\* CONSTANT definitions @modelParameterConstants:6Value
+\* CONSTANT definitions @modelParameterConstants:6MaxValue
 const_168061101273124000 == 
-{1,2}
+2
 ----
 
 \* CONSTANT definitions @modelParameterConstants:7Server

@@ -1,46 +1,46 @@
----- MODULE RAFT_1_3 ----
+---- MODULE MC ----
 EXTENDS raft_alt, TLC
 
 \* CONSTANT definitions @modelParameterConstants:0Follower
-const_168011158880918000 == 
+const_16819156469142000 == 
 "follower"
 ----
 
 \* CONSTANT definitions @modelParameterConstants:1Leader
-const_168011158880919000 == 
+const_16819156469163000 == 
 "leader"
 ----
 
 \* CONSTANT definitions @modelParameterConstants:2LargestTerm
-const_168011158880920000 == 
-10
+const_16819156469164000 == 
+20
 ----
 
 \* CONSTANT definitions @modelParameterConstants:3Nil
-const_168011158880921000 == 
+const_16819156469165000 == 
 0
 ----
 
 \* CONSTANT definitions @modelParameterConstants:4MaxLogIndex
-const_168011158880922000 == 
-3
+const_16819156469166000 == 
+7
 ----
 
 \* CONSTANT definitions @modelParameterConstants:5Candidate
-const_168011158880923000 == 
+const_16819156469167000 == 
 "candidate"
 ----
 
 \* CONSTANT definitions @modelParameterConstants:6MaxValue
-const_168011158880924000 == 
-1
+const_16819156469168000 == 
+10
 ----
 
 \* CONSTANT definitions @modelParameterConstants:7Server
-const_168011158880925000 == 
-{1,2,3}
+const_16819156469169000 == 
+{1,2,3,4,5}
 ----
 
 =============================================================================
 \* Modification History
-\* Created Wed Mar 29 19:39:48 CEST 2023 by srinidhin
+\* Created Wed Apr 19 16:47:26 CEST 2023 by srinidhin

@@ -302,8 +302,8 @@ HandleNilAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, cIndex) ==
 \* implementations could safely accept more by treating them the same as
 \* multiple independent requests of 1 entry.
 HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, entryValue, cIndex) ==
-    /\ ValidAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, cIndex)
-    /\  LET cTerm == (IF term > currentTerm[i] THEN term ELSE currentTerm[i])
+    /\  ValidAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, cIndex)
+    /\  (LET cTerm == (IF term > currentTerm[i] THEN term ELSE currentTerm[i])
             cState == (IF term > currentTerm[i] THEN Follower ELSE state[i])
             vFor == (IF term > currentTerm[i] THEN  Nil ELSE votedFor[i])
             logOk == \/ pLogIndex = 0

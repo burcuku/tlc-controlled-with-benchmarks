@@ -85,15 +85,13 @@ LastTerm(xlog) == IF Len(xlog) = 0 THEN 0 ELSE xlog[Len(xlog)].term
 
 LogIndices == 0..MaxLogIndex
 
-Terms == 1..LargestTerm
-
-NilTerm == 0
+Terms == 0..LargestTerm
 
 AllValues == 1..MaxValue \cup {Nil}
 
 NilEntry == [term |-> 0, value |-> Nil]
 
-ValidEntries == [term: Terms \cup {NilTerm}, value: AllValues]
+ValidEntries == [term: Terms, value: AllValues]
 
 AllEntries == ValidEntries \cup {NilEntry}
 
@@ -106,7 +104,7 @@ Max(s) == CHOOSE x \in s : \A y \in s : x >= y
 
 \* Define initial values for all variables
 
-InitServerVars == /\ currentTerm = [i \in Server |-> 1]
+InitServerVars == /\ currentTerm = [i \in Server |-> 0]
                   /\ state       = [i \in Server |-> Follower]
                   /\ votedFor    = [i \in Server |-> Nil]
 InitCandidateVars == /\ votesResponded = [i \in Server |-> {}]
@@ -221,7 +219,7 @@ HandleRequestVoteRequest(i,j,lTerm,lIndex,term) ==
         grant ==    /\ term = cTerm
                     /\ logOk
                     /\ vFor \in {Nil, j}
-    IN  /\ term <= currentTerm[i]
+    IN  /\ term <= cTerm
         /\  \/ (grant  /\ votedFor' = [votedFor EXCEPT ![i] = j])
             \/ (~grant /\ votedFor' = [votedFor EXCEPT ![i] = vFor])
         /\ state' = [state EXCEPT ![i] = cState]
@@ -384,10 +382,10 @@ Next == \/ \E i \in Server : Restart(i)
         \/ \E i \in Server : BecomeLeader(i)
         \/ \E i \in Server, v \in 1..MaxValue : ClientRequest(i, v)
         \/ \E i \in Server : AdvanceCommitIndex(i)
-        \/ \E i,j \in Server, term,lTerm \in Terms, lIndex \in LogIndices : HandleRequestVoteRequest(i,j,lTerm,lIndex,term)
+        \/ \E i,j \in Server, term, lTerm \in Terms, lIndex \in LogIndices : HandleRequestVoteRequest(i,j,lTerm,lIndex,term)
         \/ \E i,j \in Server, term \in Terms, grant \in BOOLEAN: HandleRequestVoteResponse(i, j, term, grant)
-        \/ \E i,j \in Server, term,pLogTerm \in Terms, pLogIndex, cIndex \in LogIndices : HandleNilAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, cIndex)
-        \/ \E i,j \in Server, term,pLogTerm,entryTerm \in Terms, pLogIndex, cIndex \in LogIndices, entryValue \in AllValues : HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, entryValue, cIndex)
+        \/ \E i,j \in Server, term, pLogTerm \in Terms, pLogIndex, cIndex \in LogIndices : HandleNilAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, cIndex)
+        \/ \E i,j \in Server, term,entryTerm,pLogTerm \in Terms, pLogIndex, cIndex \in LogIndices, entryValue \in AllValues : HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, entryValue, cIndex)
         \/ \E i,j \in Server, term \in Terms, success \in BOOLEAN, mIndex \in LogIndices: HandleAppendEntriesResponse(i, j, term, success, mIndex)
 
 ===================================================================================

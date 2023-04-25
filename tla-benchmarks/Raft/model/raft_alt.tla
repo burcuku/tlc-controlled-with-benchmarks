@@ -396,7 +396,7 @@ HandleAppendEntriesResponse(i, j, term, success, mIndex) ==
 Next == \/ \E i \in Server : Restart(i)
         \/ \E i \in Server : Timeout(i)
         \/ \E i \in Server : BecomeLeader(i)
-        \/ \E i \in Server, v \in 1..MaxValue : ClientRequest(i, v)
+        \/ \E i \in Server, v \in AllValues : ClientRequest(i, v)
         \/ \E i,j \in Server, term, lTerm \in Terms, lIndex \in LogIndices : HandleRequestVoteRequest(i,j,lTerm,lIndex,term)
         \/ \E i,j \in Server, term \in Terms, grant \in BOOLEAN: HandleRequestVoteResponse(i, j, term, grant)
         \/ \E i,j \in Server, term, pLogTerm \in Terms, pLogIndex, cIndex \in LogIndices : HandleNilAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, cIndex)

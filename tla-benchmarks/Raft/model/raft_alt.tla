@@ -359,18 +359,34 @@ HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, entryValu
 HandleAppendEntriesResponse(i, j, term, success, mIndex) ==
     LET cTerm == (IF term > currentTerm[i] THEN term ELSE currentTerm[i])
         cState == (IF term > currentTerm[i] THEN Follower ELSE state[i])
-        vFor == (IF term > currentTerm[i] THEN  Nil ELSE votedFor[i])
+        newMatchIndex == (IF term = cTerm /\ success THEN [matchIndex EXCEPT ![i][j] = mIndex] ELSE matchIndex)
     IN  /\  term < cTerm => UNCHANGED <<candidateVars, leaderVars, logVars>>
         /\  /\ term = cTerm
             /\  \/  /\ success \* successful
                     /\ nextIndex'  = [nextIndex  EXCEPT ![i][j] = mIndex + 1]
-                    /\ matchIndex' = [matchIndex EXCEPT ![i][j] = mIndex]
                 \/  /\ \lnot success \* not successful
                     /\ nextIndex' = [nextIndex EXCEPT ![i][j] =
                                         Max({nextIndex[i][j] - 1, 1})]
-                    /\ UNCHANGED <<matchIndex>>
-            /\ UNCHANGED <<candidateVars, logVars>>
+            /\  matchIndex' = newMatchIndex
+            /\  /\  cState = Leader
+                /\  LET \* The set of servers that agree up through index.
+                    Agree(index) == {i} \cup {k \in Server :
+                                                    newMatchIndex[i][k] >= index}
+                    \* The maximum indexes for which a quorum agrees
+                    agreeIndexes == {index \in 1..Len(log[i]) :
+                                            Agree(index) \in Quorum}
+                    \* New value for commitIndex'[i]
+                    newCommitIndex ==
+                        IF /\ agreeIndexes /= {}
+                            /\ log[i][Max(agreeIndexes)].term = cTerm
+                        THEN
+                            Max(agreeIndexes)
+                        ELSE
+                            commitIndex[i]
+                    IN commitIndex' = [commitIndex EXCEPT ![i] = newCommitIndex]
+            /\ UNCHANGED <<candidateVars, log>>
         /\  IF term > currentTerm[i] THEN UpdateTerm(i, term) ELSE UNCHANGED serverVars
+
 
 \* End of message handlers.
 
@@ -381,7 +397,6 @@ Next == \/ \E i \in Server : Restart(i)
         \/ \E i \in Server : Timeout(i)
         \/ \E i \in Server : BecomeLeader(i)
         \/ \E i \in Server, v \in 1..MaxValue : ClientRequest(i, v)
-        \/ \E i \in Server : AdvanceCommitIndex(i)
         \/ \E i,j \in Server, term, lTerm \in Terms, lIndex \in LogIndices : HandleRequestVoteRequest(i,j,lTerm,lIndex,term)
         \/ \E i,j \in Server, term \in Terms, grant \in BOOLEAN: HandleRequestVoteResponse(i, j, term, grant)
         \/ \E i,j \in Server, term, pLogTerm \in Terms, pLogIndex, cIndex \in LogIndices : HandleNilAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, cIndex)

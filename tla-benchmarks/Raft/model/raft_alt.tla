@@ -420,20 +420,22 @@ Next == \/ \E i \in Server : Restart(i)
         \/ \E i,j \in Server, term,entryTerm,pLogTerm \in Terms, pLogIndex, cIndex \in LogIndices, entryValue \in AllValues : HandleAppendEntriesRequest(i, j, pLogIndex, pLogTerm, term, entryTerm, entryValue, cIndex)
         \/ \E i,j \in Server, term \in Terms, success \in BOOLEAN, mIndex \in LogIndices: HandleAppendEntriesResponse(i, j, term, success, mIndex)
 
+Spec == Init /\ [][Next]_vars
+
 ----
 
-\* Writing down proof of the protocol
-\* Attempt to define abstraction of the state with predicates
+\* Invariants of the protocol
 
 HaveLeader == \E i \in Server : state[i] = Leader
 
 NoLeader == \A i \in Server : state[i] \in {Follower, Candidate}
 
 \* Only one leader in a given term
-OnlyOneLeader == \A i,j \in Server: (i /= j /\ currentTerm[i] = currentTerm[j] /\ state[i] = Leader) => state[j] /= Leader
+OnlyOneLeader == 
+    \/ NoLeader
+    \/ \A i,j \in Server: (i /= j /\ currentTerm[i] = currentTerm[j] /\ state[i] = Leader) => state[j] /= Leader
 
 LEMMA \A i \in Server: currentTerm[i] <= currentTerm'[i]
-
 
 
 

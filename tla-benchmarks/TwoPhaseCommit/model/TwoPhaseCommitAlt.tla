@@ -7,7 +7,7 @@ CONSTANT N
 VARIABLES
   rmState,    
   \*  Current request that the TM is deciding on
-  tmState,
+  tmState
 
 vars == <<rmState, tmState>>
 

@@ -123,7 +123,7 @@ RMRcvGlobalAbort(r, i) ==
 
 RMRcvGlobalCommit(r, i) ==
   (*************************************************************************)
-  (* Resource manager r is told by the TM to abort.                        *)
+  (* Resource manager r is told by the TM to commit.                       *)
   (*************************************************************************)
   (*/\ i = curRequest *)
   /\ (rmState[r] = [req |-> i, state |-> "working"] \/ rmState[r] = [req |-> i, state |-> "prepared"])

@@ -41,7 +41,7 @@ VARIABLE elections
 \* A history variable used in the proof. This would not be present in an
 \* implementation.
 \* Keeps track of every log ever in the system (set of logs).
-VARIABLE allLogs
+\* VARIABLE allLogs
 
 ----
 \* The following variables are all per server (functions with domain Server).
@@ -89,7 +89,8 @@ leaderVars == <<nextIndex, matchIndex, elections>>
 ----
 
 \* All variables; used for stuttering (asserting state hasn't changed).
-vars == <<messages, allLogs, serverVars, candidateVars, leaderVars, logVars>>
+\* vars == <<messages, allLogs, serverVars, candidateVars, leaderVars, logVars>>
+vars == <<messages, serverVars, candidateVars, leaderVars, logVars>>
 
 ----
 \* Helpers
@@ -136,8 +137,10 @@ Max(s) == CHOOSE x \in s : \A y \in s : x >= y
 ----
 \* Define initial values for all variables
 
+\* InitHistoryVars == /\ elections = {}
+\*                    /\ allLogs   = {}
+\*                    /\ voterLog  = [i \in Server |-> [j \in {} |-> <<>>]]
 InitHistoryVars == /\ elections = {}
-                   /\ allLogs   = {}
                    /\ voterLog  = [i \in Server |-> [j \in {} |-> <<>>]]
 InitServerVars == /\ currentTerm = [i \in Server |-> 1]
                   /\ state       = [i \in Server |-> Follower]
@@ -450,18 +453,18 @@ DropMessage(m) ==
 
 ----
 \* Defines how the variables may transition.
-Next == /\ \/ \E i \in Server : Restart(i)
-           \/ \E i \in Server : Timeout(i)
-           \/ \E i,j \in Server : RequestVote(i, j)
-           \/ \E i \in Server : BecomeLeader(i)
-           \/ \E i \in Server, v \in Value : ClientRequest(i, v)
-           \/ \E i \in Server : AdvanceCommitIndex(i)
-           \/ \E i,j \in Server : AppendEntries(i, j)
-           \/ \E m \in DOMAIN messages : Receive(m)
-           \/ \E m \in DOMAIN messages : DuplicateMessage(m)
-           \/ \E m \in DOMAIN messages : DropMessage(m)
+Next == \/ \E i \in Server : Restart(i)
+        \/ \E i \in Server : Timeout(i)
+        \/ \E i,j \in Server : RequestVote(i, j)
+        \/ \E i \in Server : BecomeLeader(i)
+        \/ \E i \in Server, v \in Value : ClientRequest(i, v)
+        \/ \E i \in Server : AdvanceCommitIndex(i)
+        \/ \E i,j \in Server : AppendEntries(i, j)
+        \/ \E m \in DOMAIN messages : Receive(m)
+        \/ \E m \in DOMAIN messages : DuplicateMessage(m)
+        \/ \E m \in DOMAIN messages : DropMessage(m)
            \* History variable that tracks every log ever:
-        /\ allLogs' = allLogs \cup {log[i] : i \in Server}
+        \* /\ allLogs' = allLogs \cup {log[i] : i \in Server}
 
 \* The specification must start with the initial state and transition according
 \* to Next.

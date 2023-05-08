@@ -1,4 +1,4 @@
----- MODULE MC ----
+---- MODULE RAFT_10_3 ----
 EXTENDS raft_alt, TLC
 
 \* CONSTANT definitions @modelParameterConstants:0Follower

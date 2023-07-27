@@ -3,7 +3,7 @@ EXTENDS raft_crashes, TLC
 
 \* CONSTANT definitions @modelParameterConstants:0MaxTerm
 const_16904750463592000 == 
-6
+8
 ----
 
 \* CONSTANT definitions @modelParameterConstants:1Follower

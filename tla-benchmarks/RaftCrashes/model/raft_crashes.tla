@@ -77,7 +77,7 @@ UpdateSnapshot(i, si) ==
     /\ UNCHANGED <<currentActive, state, lastLog, leaderTerm, commitIndex, snapshotIndex>>
 
 Add(i) ==
-    LET newActive == currentActive \union i
+    LET newActive == currentActive \union {i}
     IN 
         /\ currentActive' = newActive
         /\ state' = [j \in newActive |-> IF j \in currentActive THEN state[j] ELSE Follower]

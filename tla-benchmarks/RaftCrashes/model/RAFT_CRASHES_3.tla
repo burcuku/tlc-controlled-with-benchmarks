@@ -1,26 +1,36 @@
 ---- MODULE RAFT_CRASHES_3 ----
 EXTENDS raft_crashes, TLC
 
-\* CONSTANT definitions @modelParameterConstants:0Follower
-const_16884581212942000 == 
+\* CONSTANT definitions @modelParameterConstants:0MaxTerm
+const_16904750463592000 == 
+6
+----
+
+\* CONSTANT definitions @modelParameterConstants:1Follower
+const_16904750463613000 == 
 "follower"
 ----
 
-\* CONSTANT definitions @modelParameterConstants:1Leader
-const_16884581212943000 == 
+\* CONSTANT definitions @modelParameterConstants:2MaxIndex
+const_16904750463614000 == 
+7
+----
+
+\* CONSTANT definitions @modelParameterConstants:3Leader
+const_16904750463615000 == 
 "leader"
 ----
 
-\* CONSTANT definitions @modelParameterConstants:2Server
-const_16884581212954000 == 
+\* CONSTANT definitions @modelParameterConstants:4Server
+const_16904750463616000 == 
 {1,2,3}
 ----
 
-\* CONSTANT definitions @modelParameterConstants:3Candidate
-const_16884581212955000 == 
+\* CONSTANT definitions @modelParameterConstants:5Candidate
+const_16904750463617000 == 
 "candidate"
 ----
 
 =============================================================================
 \* Modification History
-\* Created Tue Jul 04 10:08:41 CEST 2023 by srinidhin
+\* Created Thu Jul 27 18:24:06 CEST 2023 by srinidhin

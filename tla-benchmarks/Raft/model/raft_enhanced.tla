@@ -436,11 +436,11 @@ ElectLeader(i) ==
 
 \* Transitions related to maininting set of active servers
 AddToActive(i) == 
-    /\ currentActive = currentActive \union {i}
+    /\ currentActive' = currentActive \union {i}
     /\ UNCHANGED <<serverVars, leaderVars, logVars, candidateVars>>
 
 RemoveFromActive(i) ==
-    /\ currentActive \ {i}
+    /\ currentActive' = currentActive \ {i}
     /\ UNCHANGED <<serverVars, leaderVars, logVars, candidateVars>>
 
 ----

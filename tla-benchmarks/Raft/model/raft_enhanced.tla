@@ -204,7 +204,7 @@ AdvanceCommitIndex(i) ==
 \* This is done once the snapshot is stored into the memory
 UpdateSnapshotIndex(i, si) ==
     /\ si <= Len(log[i])
-    /\ snapshotIndex = [snapshotIndex EXCEPT  ![i] = si]
+    /\ snapshotIndex' = [snapshotIndex EXCEPT  ![i] = si]
     /\ UNCHANGED <<currentTerm, state, votedFor, logVars, candidateVars, leaderVars, gloablVars>>
 
 ----
@@ -264,7 +264,7 @@ HandleRequestVoteResponse(i, j, term, grant) ==
                                         votesGranted[i] \cup {j}]
                 \/  /\ ~grant
                     /\ UNCHANGED <<votesGranted>>
-            /\ UNCHANGED <<leaderVars, logVars, currentActive>>
+            /\ UNCHANGED <<leaderVars, logVars, snapshotIndex, currentActive>>
         /\  IF term > currentTerm[i] THEN UpdateTerm(i, term) ELSE UNCHANGED <<serverVars, currentActive>>
 
 \* Constraints on inputs for an append entries request
@@ -429,7 +429,7 @@ ElectLeader(i) ==
                          [j \in Server |-> Len(log[i]) + 1]]
     /\ matchIndex' = [matchIndex EXCEPT ![i] =
                          [j \in Server |-> 0]]
-    /\ UNCHANGED <<currentTerm, votedFor, candidateVars, logVars>>
+    /\ UNCHANGED <<currentTerm, votedFor, candidateVars, logVars, snapshotIndex, currentActive>>
     
 
 ----

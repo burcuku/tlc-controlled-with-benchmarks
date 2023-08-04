@@ -68,7 +68,7 @@ leaderVars == <<nextIndex, matchIndex>>
 
 \* Current active processes
 VARIABLE currentActive
-gloablVars == <<currentActive>>
+globalVars == <<currentActive>>
 
 \* End of per server variables.
 
@@ -76,7 +76,7 @@ gloablVars == <<currentActive>>
 
 \* All variables; used for stuttering (asserting state hasn't changed).
 \* vars == <<messages, allLogs, serverVars, candidateVars, leaderVars, logVars>>
-vars == <<serverVars, candidateVars, leaderVars, logVars, gloablVars>>
+vars == <<serverVars, candidateVars, leaderVars, logVars, globalVars>>
 
 ----
 
@@ -205,7 +205,7 @@ AdvanceCommitIndex(i) ==
 UpdateSnapshotIndex(i, si) ==
     /\ si <= Len(log[i])
     /\ snapshotIndex' = [snapshotIndex EXCEPT  ![i] = si]
-    /\ UNCHANGED <<currentTerm, state, votedFor, logVars, candidateVars, leaderVars, gloablVars>>
+    /\ UNCHANGED <<currentTerm, state, votedFor, logVars, candidateVars, leaderVars, globalVars>>
 
 ----
 

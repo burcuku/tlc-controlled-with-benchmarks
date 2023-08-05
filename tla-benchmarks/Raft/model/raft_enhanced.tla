@@ -420,10 +420,9 @@ HandleAppendEntriesResponse(i, j, term, success, mIndex) ==
 
 \* Select process i as leader
 \* Does not check if a quorum of votes have been received
-\* Still need a timeout to be called before
 ElectLeader(i) == 
     /\ IsCurrentlyActive(i)
-    /\ state[i] = Candidate
+    /\ state[i] \in {Follower, Candidate}
     /\ state'      = [state EXCEPT ![i] = Leader]
     /\ nextIndex'  = [nextIndex EXCEPT ![i] =
                          [j \in Server |-> Len(log[i]) + 1]]

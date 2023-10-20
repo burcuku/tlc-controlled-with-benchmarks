@@ -1,4 +1,4 @@
----- MODULE RAFT_5_5 ----
+---- MODULE RAFT_3_5 ----
 EXTENDS raft_enhanced, TLC
 
 \* CONSTANT definitions @modelParameterConstants:0Follower

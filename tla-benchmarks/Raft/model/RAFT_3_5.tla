@@ -33,7 +33,7 @@ const_16823648380257000 ==
 
 \* CONSTANT definitions @modelParameterConstants:6MaxValue
 const_16823648380258000 == 
-5
+3
 ----
 
 \* CONSTANT definitions @modelParameterConstants:7Server

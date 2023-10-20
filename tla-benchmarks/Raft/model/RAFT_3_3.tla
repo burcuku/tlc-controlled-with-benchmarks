@@ -1,5 +1,5 @@
 ---- MODULE RAFT_3_3 ----
-EXTENDS raft_alt, TLC
+EXTENDS raft_enhanced, TLC
 
 \* CONSTANT definitions @modelParameterConstants:0Follower
 const_168061104927626000 == 

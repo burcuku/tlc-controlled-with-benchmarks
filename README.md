@@ -4,7 +4,7 @@ Running a controlled execution of a TLA+ model using TLC
 This repository contains:
 
 - `tlc-controlled`: An extended version of the TLC checker that allows to run a controlled schedule of actions of a TLA+ model
-- `tla-benchmarks`: A set of TLA+ benchmarks
+- `tla-benchmarks`: A set of TLA+ benchmarks, with the TLA+ model and configurations of the Microbenchmark
 
 ## Building the TLC checker:
 

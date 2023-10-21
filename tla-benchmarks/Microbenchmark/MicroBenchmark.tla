@@ -1,4 +1,4 @@
-------------------------------- MODULE ExampleApp -------------------------------
+------------------------------- MODULE MicroBenchmark -------------------------------
 EXTENDS Naturals, TLC, FiniteSets
 
 CONSTANT N   \* The number of requests

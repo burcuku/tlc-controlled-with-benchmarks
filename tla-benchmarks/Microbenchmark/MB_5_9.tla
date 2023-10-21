@@ -1,9 +1,9 @@
----- MODULE EA_5 ----
-EXTENDS ExampleApp, TLC
+---- MODULE MB_5_9 ----
+EXTENDS MicroBenchmark, TLC
 
 \* CONSTANT definitions @modelParameterConstants:0N
 const_169685898602977000 == 
-5
+9
 ----
 
 \* CONSTANT definitions @modelParameterConstants:1M

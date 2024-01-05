@@ -2,94 +2,103 @@
 EXTENDS Naturals, TLC, FiniteSets
 
 CONSTANT N   \* The number of requests
-CONSTANT M   \* The number of workers
+CONSTANT M   \* The set of workers
 
 VARIABLES
     appMasterState,
+    registeredWorkers,
+    registeredTerminator,
     workerState,
     workerBuffer,
     terminatorState,
+    curExecute,
     msgs
     
 Messages ==
-    [type : {"RegisterWorker", "RegisterTerminator", "Request"}] \cup [type : {"Execute"}, req : (0..N), worker : M] \cup [type : {"Terminate", "Flush"}, worker : M]
+    [type : {"RegisterTerminator"}] \cup [type : {"Execute"}, req : (0..N), worker : M] \cup [type : {"RegisterWorker", "Terminate", "Flush"}, worker : M]
     
 TypeOK ==
-    /\ appMasterState \in [w : (0..M), t : {0, 1}, state : {"init", "ready", "inProgress"}]
+    /\ appMasterState \in {"init", "inProgress"}
+    /\ registeredWorkers \subseteq M
+    /\ registeredTerminator \in {0,1}
     /\ workerState \in [M -> [state: {"working", "completed", "flushed"}]]
     /\ workerBuffer \subseteq (0..N) 
     /\ terminatorState \in {"working", "terminating"}
+    /\ curExecute \in (0..N)
     /\ msgs \subseteq Messages
     
 Init ==
-    /\ appMasterState = [w |-> 0, t |-> 0, state |-> "init"]
+    /\ appMasterState = "init"
+    /\ registeredWorkers = {}
+    /\ registeredTerminator = 0
     /\ workerState = [w \in M |-> [state |-> "working"]]
     /\ workerBuffer = {}
     /\ terminatorState = "working"
+    /\ curExecute = 0
     /\ msgs = {}
 
 WorkerRegister(w) ==
     /\ workerState[w]["state"] = "working"
-    /\ msgs' = msgs \cup {[type |-> "RegisterWorker"]}
-    /\ UNCHANGED <<appMasterState, terminatorState, workerBuffer, workerState>>
+    /\ msgs' = msgs \cup {[type |-> "RegisterWorker", worker |-> w]}
+    /\ UNCHANGED <<appMasterState, registeredWorkers, registeredTerminator, workerState, workerBuffer, terminatorState, curExecute>>
 
-MasterRegisterWorker ==
-    /\ appMasterState["state"] = "init"
-    /\ appMasterState["w"] <= Cardinality(M)
-    /\ [type |-> "RegisterWorker"] \in msgs
-    /\ appMasterState' = IF appMasterState = [w |-> Cardinality(M) - 1, t |-> 1, state |-> "init"] THEN [w |-> Cardinality(M), t |-> 1, state |-> "ready"] ELSE [w |-> appMasterState["w"] + 1, t |-> appMasterState["t"], state |-> "init"]
-    /\ UNCHANGED <<workerState, terminatorState, msgs, workerBuffer>>
+MasterRegisterWorker(w) ==
+    /\ appMasterState = "init"
+    /\ [type |-> "RegisterWorker", worker |-> w] \in msgs
+    /\ registeredWorkers' = registeredWorkers \cup {w}
+    /\ UNCHANGED <<appMasterState, registeredTerminator, workerState, workerBuffer, terminatorState, curExecute, msgs>>
 
 TerminatorRegister ==
     /\ terminatorState = "working"
     /\ msgs' = msgs \cup {[type |-> "RegisterTerminator"]}
-    /\ UNCHANGED <<appMasterState, workerState, workerBuffer, terminatorState>>
+    /\ UNCHANGED <<appMasterState, registeredWorkers, registeredTerminator, workerState, workerBuffer, terminatorState, curExecute>>
 
 MasterRegisterTerminator ==
-    /\ appMasterState["state"] = "init"
-    /\ appMasterState["t"] <= 1
+    /\ appMasterState = "init"
     /\ [type |-> "RegisterTerminator"] \in msgs
-    /\ appMasterState' = IF appMasterState = [w |-> Cardinality(M), t |-> 0, state |-> "init"] THEN [w |-> Cardinality(M), t |-> 1, state |-> "ready"] ELSE [w |-> appMasterState["w"], t |-> appMasterState["t"] + 1, state |-> "init"]
-    /\ UNCHANGED <<workerState, terminatorState, msgs, workerBuffer>>
+    /\ registeredTerminator' = 1
+    /\ UNCHANGED <<appMasterState, registeredWorkers, workerState, workerBuffer, terminatorState, curExecute, msgs>>
     
 MasterRcvRequest(w, r) ==
-    /\ appMasterState["state"] = "ready"
-    /\ msgs' = msgs \cup {[type |-> "Execute", req |-> 1, worker |-> w], [type |-> "Terminate", worker |-> r]}
-    /\ appMasterState' = [w |-> Cardinality(M), t |-> 1, state |-> "inProgress"]
-    /\ UNCHANGED <<workerState, terminatorState, workerBuffer>>
+    /\ r = curExecute
+    /\ appMasterState = "init"
+    /\ registeredWorkers = M
+    /\ registeredTerminator = 1
+    /\ msgs' = msgs \cup {[type |-> "Execute", req |-> r, worker |-> w], [type |-> "Terminate", worker |-> w]}
+    /\ appMasterState' = "inProgress"
+    /\ UNCHANGED <<registeredWorkers, registeredTerminator, workerState, workerBuffer, terminatorState, curExecute>>
     
 WorkerRcvExecute(w, r) ==
+    /\ r = curExecute
     /\ workerState[w] = [state |-> "working"]
     /\ [type |-> "Execute", req |-> r, worker |-> w] \in msgs
     /\ workerBuffer' = workerBuffer \cup {r} 
     /\ msgs' = msgs \cup {[type |-> "Execute", req |-> r + 1, worker |-> w]}
     /\ workerState' = IF r = N THEN [workerState EXCEPT ![w] = [state |-> "completed"]] ELSE workerState
-    /\ UNCHANGED <<appMasterState, terminatorState>>
+    /\ curExecute' = curExecute + 1
+    /\ UNCHANGED <<appMasterState, registeredWorkers, registeredTerminator, terminatorState>>
     
 TerminatorRcvTerminate(w) ==
     /\ terminatorState = "working"
     /\ [type |-> "Terminate", worker |-> w] \in msgs
     /\ msgs' = msgs \cup {[type |-> "Flush", worker |-> w]}
     /\ terminatorState' = "terminating"
-    /\ UNCHANGED <<appMasterState, workerState, workerBuffer>>
+    /\ UNCHANGED <<appMasterState, registeredWorkers, registeredTerminator, workerState, workerBuffer, curExecute>>
 
 WorkerRcvFlush(w) ==
     /\ (workerState[w]["state"] = "working") \/ (workerState[w]["state"] = "completed")
     /\ [type |-> "Flush", worker |-> w] \in msgs
     /\ workerBuffer' = {}
     /\ workerState' = [workerState EXCEPT ![w] = [state |-> "flushed"]]
-    /\ UNCHANGED <<appMasterState, terminatorState, msgs>>
+    /\ UNCHANGED <<appMasterState, registeredWorkers, registeredTerminator, terminatorState, curExecute, msgs>>
 
 Next ==
-    \/ MasterRegisterWorker
     \/ TerminatorRegister
     \/ MasterRegisterTerminator
-    \/ \E r \in M, w \in M:
-        MasterRcvRequest(w, r)
     \/ \E r \in (0..N), w \in M:
-        WorkerRcvExecute(w, r) \/ WorkerRegister(w) \/ TerminatorRcvTerminate(w) \/ WorkerRcvFlush(w)
+        WorkerRcvExecute(w, r) \/ WorkerRegister(w) \/ TerminatorRcvTerminate(w) \/ WorkerRcvFlush(w) \/ MasterRegisterWorker(w) \/ MasterRcvRequest(w, r)
 
-Spec == Init /\ [][Next]_<<appMasterState, workerState, terminatorState, workerBuffer, msgs>>
+Spec == Init /\ [][Next]_<<appMasterState, registeredWorkers, registeredTerminator, workerState, terminatorState, workerBuffer, curExecute, msgs>>
 
 THEOREM Spec => [](TypeOK)
     

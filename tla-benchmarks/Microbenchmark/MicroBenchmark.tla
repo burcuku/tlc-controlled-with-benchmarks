@@ -64,7 +64,7 @@ MasterRcvRequest(w, r) ==
     /\ appMasterState = "init"
     /\ registeredWorkers = M
     /\ registeredTerminator = 1
-    /\ msgs' = msgs \cup {[type |-> "Execute", req |-> r, worker |-> w], [type |-> "Terminate", worker |-> w]}
+    /\ msgs' = msgs \cup {[type |-> "Execute", req |-> r, worker |-> 1], [type |-> "Terminate", worker |-> 1]}
     /\ appMasterState' = "inProgress"
     /\ UNCHANGED <<registeredWorkers, registeredTerminator, workerState, workerBuffer, terminatorState, curExecute>>
     

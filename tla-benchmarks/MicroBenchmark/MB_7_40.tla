@@ -1,14 +1,14 @@
----- MODULE MB_4_9 ----
+---- MODULE MB_7_40 ----
 EXTENDS MicroBenchmark, TLC
 
 \* CONSTANT definitions @modelParameterConstants:0N
 const_169685898602977000 == 
-9
+40
 ----
 
 \* CONSTANT definitions @modelParameterConstants:1M
 const_169685898602978000 == 
-{1, 2, 3, 4}
+{1, 2, 3, 4, 5, 6, 7}
 ----
 
 =============================================================================
